@@ -9,54 +9,51 @@ ms.service:  Cognitive-services
 ms.devlang:   dotnet
 ---
 
-# Evaluate a model in an Azure WebApi using CNTK Library Managed API
+# CNTK Library Managed API を使って Azure WebApi 上でモデルを評価する
 
-## Deploy through Azure Machine Learning Command Line
-One way to deploy a CNTK model on Azure and be able to run the deployed model through Web APIs is via a command line interface to Azure Machine Learning.  Click [here](https://docs.microsoft.com/en-us/azure/machine-learning/preview/scenario-image-classification-using-cntk) to learn how.
+## Azure Machine Learning コマンドラインでのデプロイ
 
-## Deploy through ASP.NET
-We will walk you to the required steps to deploy a CNTK model on Azure and send web requests to the Azure endpoint to 
-evaluate data against the deployed model. We will build this functionality in form of a WebApi, but focus on the most 
-basic Azure functionality. Please refer to more advanced Azure documentation to learn about all the advanced abilities, i.e. parameter passing etc.
+Azure に CNTK のモデルをデプロイし Web API を通して実行する方法の一つに、Azure Machine Learning のコマンドラインインターフェースがあります。詳細については、[こちら](https://docs.microsoft.com/ja-jp/azure/machine-learning/preview/scenario-image-classification-using-cntk)を参照してください。
 
-### Requirements
+## ASP.NET でデプロイ
 
-As we are currently using VS2015 to build CNTK, we focus on this version of Visual Studio.
+Azure に CNTK のモデルをデプロイし、Azure のエンドポイントにリクエストを送信してデプロイされたモデルでデータを評価する手順を説明しましょう。この機能を、Azure の基本的な機能にフォーカスして WebApi のフォームでビルドします。パラメーターの渡し方といった詳細な機能については、　Azure のドキュメントを参照してください。
 
-#### Web Development Feature for Visual Studio
 
-You need to enable Web-Development features in Visual Studio. You can see if this feature is enabled (and enable if necessary) 
-by executing the VS installer again (`Control Panel -> Program and Features -> Microsoft Visual Studio 201x`, right click and select 
-`Change` to invoke the VS installer)
+## 前提条件
+
+現在、VS2015 で CNTK をビルドしているため、このバージョンにフォーカスしています。
+
+#### Visual Studio の Web 開発機能
+
+Visual StudioでWeb開発機能を有効にする必要があります。 この機能が有効かどうかは、VS installer を実行して確認できます(`コントロールパネル -> プログラムと機能 -> Microsoft Visual Studio 201x`, 右クリックし `変更` をクリックして VS installer を実行)。
 
 #### Azure SDK
 
-The Azure SDK for .NET needs to be installed on your development machine. The download page for this 
-is: [Azure SDK Download](https://azure.microsoft.com/downloads/)
+開発するマシンには he Azure SDK for .NET のインストールが必要です。ダウンロードページはこちらです: [Azure SDK Download](https://azure.microsoft.com/downloads/)
 
 #### Azure Account
 
-Since we are going to host the CNTK model on Azure, you will need an Azure account. If you have an MSDN or Visual Studio subscription, that account will be sufficient to host your model for this tutorial. CNTK requires a 64-bit virtual machine to host, a free Azure account doesn’t include this capability and will not be sufficient.
+Azure に CNTK モデルをホストするため、Azure アカウントが必要です。MSDN か Visual Studio subscription をお持ちの場合、このチュートリアルでのモデルのホストが可能です。CNTK をホストするのには、64ビットの仮想マシンが必要のため、無料の Azure アカウントではできません。
 
-Initially we will develop the WebApi locally and then upload this to our Azure instance. So you will be able to follow the majority of the steps even without access to Azure.
+最初に WebApi をローカルで開発し、それから Azure のインスタンスにアップロードします。 そのため、Azure にアクセスしなくてもほとんどの手順を行うことができます。
 
+### やってみまよう
 
-### Let’s get started
+既に **[CNTKAzureTutorial01](https://github.com/Microsoft/CNTK/tree/master/Examples/Evaluation/CNTKAzureTutorial01)** というプロジェクトの青写真があります。このプロジェクトは CNTK の GitHub リポジトリの一部であり、 `Examples \ Evaluation \ CNTKAzureTutorial01` フォルダにあります。
 
-We already created a project blueprint called **[CNTKAzureTutorial01](https://github.com/Microsoft/CNTK/tree/master/Examples/Evaluation/CNTKAzureTutorial01)**. This project is part of the CNTK GitHub repository and can be found in the folder `Examples\Evaluation\CNTKAzureTutorial01`. 
+**サンプルプロジェクトは CNTK Library Managed API を使用しています。EvalDll APIを使用するには、モデルを評価するために、[CNTK EvalDLL API](./evaldll-evaluation-on-windows.md) を使用してください。EvalDll の使用に関するチュートリアルは、[Evaluate a model in Azure WebApi using EvalDll](./evaluate-a-model-in-an-azure-webapi-using-evaldll.md) にあります。**
 
-**Please note that the sample project is using CNTK Library Managed API. For users who use the EvalDll API, to evaluate the model, please use [CNTK EvalDLL API](./evaldll-evaluation-on-windows.md). The tutorial for using EvalDll can be found at [Evaluate a model in Azure WebApi using EvalDll](./evaluate-a-model-in-an-azure-webapi-using-evaldll.md)**
+必要なコードをすべて追加してから、このソリューションを開始することをお勧めします。ここでは、チュートリアルのプロジェクトを作成する操作の一覧は以下です。
 
-We recommend you start from this solution, since we already added all the code we need. For completeness here is the list of operations to create the tutorial project:
+- Visual Studio で `ファイル -> 新規作成 -> プロジェクト -> Visual C# -> Web -> ASP.NET ウェブアプリケーション ` から新しいプロジェクト/ソリューション CNTKAzureTutorial01 を作成します。Azure API App テンプレートを選択し、'Web API'への参照を追加し、ローカルにホストされることをを確認します（まだクラウドにホストされていません）。
 
-- We started by creating a new project/solution in VisualStudio from `File->New->Project->Visual C#->Web->ASP.NET WebApplication`: CNTKAzureTutorial01. We picked an Azure API App template, added references to ‘Web API’ and made sure it is hosted locally (**NOT** hosted in the cloud – yet).
-
-- Then we performed the following code changes to build the tutorial project:
-    - In the ValueController.cs we added a few required using directives
-    - Replaced the code in `public async Task<IEnumerable<string>> Get()` to actually call our CNTK evaluation function
-    - Added the function `public async Task<string[]> EvaluateCustomDNN(string imageUrl)`. We adopted this function from our CNTK Eval samples (method `EvaluateImageClassificationModel` from the CNTK repository in the file `Examples\Evaluation\CSEvalClient\Program.cs`)
-    - Added the file `CNTKImageProcessing.cs` to add a Bitmap-resize functionality. This is originating from the CNTK repository in `Examples\Evaluation\ImageExtension\CNTKImageProcessing.cs` to namespace and class name
-    - The directory of the created binaries in our solution needs to get added to the `PATH` environment of the application. This is required since our project includes native DLLs, and those are only loaded if they are reachable in the standard search path. We added the following code in the `Application_Start()` method in `global.asax`:
+- 次にチュートリアルプロジェクトをビルドするために、以下のコード変更を行います：
+    - ValueController.cs で必要なディレクティブをいくつか追加します。
+    - `public async Task<IEnumerable<string>> Get()` のコードを、実際に CNTK の評価関数が呼ばれるように変更します。
+    - `public async Task<string[]> EvaluateCustomDNN(string imageUrl)` 関数を追加する。. この関数は、CNTK 評価サンプル（ CNTK リポジトリの Example\Evaluation\CSEvalClient\Program.cs ファイルの EvaluateImageClassificationModel メソッド）から採用しました。
+    - ビットマップのリサイズ機能を追加するために、`CNTKImageProcessing.cs` ファイルを追加しました。これは、CNTK リポジトリの Examples\Evaluation\ImageExtension\CNTKImageProcessing.cs の名前空間とクラス名です。
+    - ソリューションで作成されたバイナリーのディレクトリは、アプリケーションの環境変数に追加する必要があります。プロジェクトにはネイティブの DLL が含まれており、標準の検索パスで到達可能な場合にのみ読み込まれますので、この追加が必要です。`global.asax` の `Application_Start()` メソッドに次のコードを追加します。
    
              string pathValue = Environment.GetEnvironmentVariable("PATH");
              string domainBaseDir = AppDomain.CurrentDomain.BaseDirectory;
@@ -65,48 +62,46 @@ We recommend you start from this solution, since we already added all the code w
              Environment.SetEnvironmentVariable("PATH", pathValue);
    
            
-### Hosting the WebApi locally
+### ローカルの WebApi にホストする
 
-These are the changes we performed so far. We still need to get the CNTK Eval functionality included in the project and 
-need a model to evaluate. 
+これまで変更を行ってきました。プロジェクトに含まれている CNTK の評価機能を取得し、評価する必要があります。
 
-Add the CNTK Eval functionality to the project. This is available as a NuGet package. In VS select `Tools -> NuGet Package Manager -> Manage NuGet Packages for Solution...`, pick `nuget.org` as the online source, search for `CNTK` and install the latest package version (`CNTK.GPU` or `CNTK.CPUOnly`) to the project.
+プロジェクトに CNTK 評価機能を追加しましょう。ここでは、NuGet パッケージを使います。Visual Studio で、`ツール -> NuGet パッケージ マネージャー -> ソリューションの Nuget パッケージの管理` を選択し、オンラインのソースで `nuget.org` を選択し `CNTK` を検索します。そして、最新バージョン（`CNTK.GPU` または `CNTK.CPUOnly`）をプロジェクトにインストールします。
 
 ![NuGet](./pictures/EvaluateWebApiCntkLibrary/nuget_manager.png)
 
-Now we need a model to evaluate. Download the [ResNet20_CIFAR10_CNTK.model](https://www.cntk.ai/Models/CNTK_Pretrained/ResNet20_CIFAR10_CNTK.model) and save it in the directory `CNTK\Models` under the project folder. The model file needs also to be included in the solution (`Project -> Add existing Item`)
+次は、モデルの評価です。[ResNet20_CIFAR10_CNTK.model](https://www.cntk.ai/Models/CNTK_Pretrained/ResNet20_CIFAR10_CNTK.model) をダウンロードし、プロジェクトフォルダーの `CNTK\Models` ディレクトリに保存します。
 
-CNTK requires a 64-bit runtime environment. Make sure in the Configuration Manager that the project is compiled for the x64 platform. In addition, the WebApi we are creating has to be hosted in a 64-bit instance of IIS. You can enforce this by selecting "Use 64 bit version of IIS Express for web sites and projects" in `Tools -> Options -> Project and Solutions -> WebProjects`
+CNTK は、64ビットの実行環境が必要です。構成マネージャーで、プロジェクトが x64 プラットフォーム用にコンパイルされていることを確認してください。さらに、作った WebApi を、64ビットのIISのインスタンスでホストする必要があります。`ツール -> オプション -> プロジェクトおよびソリューション -> Webプロジェクト` で、"Web サイトおよびプロジェクト用のIIS Express の 64ビット バージョンを使用する" が選択して強制することができます。
 
 ![Project](./pictures/EvaluateWebApiCntkLibrary/setting_64_bits_in_vs.png)
 
-At this point you have performed all the necessary steps to execute the model locally on your machine. In Visual Studio press `F5` to run the project. This will open an internet browser on the default web site and display an error message. This is to be expected since we have created a WebApi and not a website. We easily call the implemented WebApi by changing the address in the browser to: 
+これでローカルのマシンでモデルを評価するのに必要なセットアップが全てできました。Visual Studio で　`F5` を押してプロジェクトを実行しましょう。デフォルトのウェブサイトがインターネットのブラウザで開き、エラーメッセージが表示されます。これは、ウェブサイトではなく WebApi を作成したので想定通りです。実装したWebApiは、ブラウザのアドレスを次のように変更することで簡単に呼び出せます：
 
 `http://localhost:<portnumber>/api/values`
 
-This will call the `Get()` method in the ValuesController-Class which will in turn call the method `EvaluateCustomDNN()` and return a result to your web browser
+ValuesController クラスの `Get()` メソッドが呼ばれ、`EvaluateCustomDNN()` メソッドが呼ばれてブラウザに結果が返ってきます。
 
 ![local](./pictures/EvaluateWebApiCntkLibrary/local_webapi_evaluation.png)
 
-### Hosting the WebApi on Azure
+### Azure上の WebApi にホストする
 
-With this we accomplished the first part of our mission, now we need this functionality hosted in Azure!
-From the Build menu of your project select the `Publish` command. Pick `Microsoft Azure App Service` as the publishing target
+これで1爪のミッションを達成しました。次は、Azure上にこの機能をホストします。プロジェクトのビルドメニューで、`発行` コマンドを選択します。Pick 発行のターゲットは、`Microsoft Azure App Service` を選択します。
  
 ![Azure](./pictures/EvaluateWebApiCntkLibrary/publishing_webapp.png)
 
-In the AppService dialog you have to log-in with your account and select the appropriate subscription and resource group. Be sure to pick a resource group that supports 64-bit virtual machines (the ‘free’ resource group isn’t sufficient for this). During the final publishing steps you have to pick a x64-configuration in the Setting menu. This is required to also publish the native binary components of CNTK to Azure
+AppServiceダイアログでアカウントにログインし、適切なサブスクリプションとリソースグループを選択する必要があります。64ビットの仮想マシンをサポートしているリソースグループを選択してください（このためには、'Free' のリソースグループでは不十分です）。 発行の最後のステップでは、設定メニューで x64 の構成を選択する必要があります。これは、Azure に CNTK のバイナリーコンポーネントを発行するために必要です。
 
 ![AzureSettings](./pictures/EvaluateWebApiCntkLibrary/publishing_step.png)
 
-Once you publish you model and you call your published WebApi in the browser, you will see an error message. Open the Azure portal and make sure your WebApi is running on a 64-bit platform (change and ‘save’ the setting if required, this will also restart your virtual machine instance in Azure). 
+モデルを発行してブラウザーでWebApiを呼ぶと、エラーメッセージが表示されます。Azure ポータルを開き、WebApi が 64 ビットプラットフォーム上で動作していることを確認します（必要に応じて設定を変更し、'保存' します。これにより Azure の仮想マシンのインスタンスも再起動します）。
 
 ![Azure64Settings](./pictures/EvaluateWebApiCntkLibrary/setting_64_bits_in_portal.png)
 
-Once you performed these changes, you will be able to call you WebApi under
+これらの変更を実行すると、次のURL で WebApi を呼び出すことができます。
 `http://<yourwebapp>.azurewebsites.net/api/values`
  
 ![AzureSettings](./pictures/EvaluateWebApiCntkLibrary/remote_webapi_evaluation.png)
 
-This project showed you how to integrate the CNTK Eval functionality using CNTK Library Managed API in an Azure WebApi and setup Azure to run the CNTK eval binaries. In a next step you can now add new APIs to dynamically supply data to the eval-function or upload new model version. These are WebApi/Azure development tasks, and you should refer to the Azure documentation for this.
+このプロジェクトで、Azure の WebApi で CNTK Library Managed API を使用して CNTK 評価機能を統合し、Azure で CNTK 評価バイナリを実行する設定方法を示しました。次のステップでは、新しいAPIを追加して、評価機能にデータを動的に提供したり、モデルの新しいバージョンをアップロードします。これらは WebApi / Azure の開発タスクです。これについては Azure のドキュメントを参照してください。
 
